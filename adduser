@@ -1,0 +1,30 @@
+#! /bin/bash
+
+USERS=("user1" "user2" "user3")
+
+for USER in "${USERS[@]}"; do
+    USER_HOME="/home/$USER"
+
+    if id "$USER" &>/dev/null; then
+	echo "User $USER already exists"
+	continue
+    fi
+    
+    #Створюємо користувача
+    sudo useradd -m -d "$USER_HOME" "$USER"
+
+    #Генеруємо пароль
+    PASSWORD=$(openssl rand -base64 12)
+    echo "$PASSWORD" | sudo tee "$USER_HOME/$USER-password.txt" > /dev/null
+    sudo chown "$USER:$USER" "$USER_HOME/$USER-password.txt"
+    sudo chown 600 "$USER_HOME/$USER-password.txt"
+
+    #Створюємо SSH ключ
+    sudo -u "$USER" mkdir -p "$USER_HOME/.ssh"
+    sudo -u "$USER" ssh-keygen -t rsa -b 2048 -f "$USER_HOME/.ssh/id_rsa" -N ""
+    sudo chmod 700 "$USER_HOME/.ssh"
+    sudo chmod 600 "$USER_HOME/.ssh/id_rsa"
+    sudo chmod 644 "$USER_HOME/.ssh/id_rsa.pub"
+
+    echo "User $USER created. Password saved in $USER_HOME/.ssh/id_rsa" -N ""
+done
